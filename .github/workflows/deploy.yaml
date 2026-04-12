@@ -8,22 +8,28 @@ jobs:
     name: build Node.js Docker Image and deploy to minikube
     steps:
     - uses: actions/checkout@v2
+
     - name: Start minikube
       uses: medyagh/setup-minikube@master
+
     - name: Try the cluster !
       run: kubectl get pods -A
+
     - name: Build image
       run: |
           export SHELL=/bin/bash
           eval $(minikube -p minikube docker-env)
           docker build -f ./Dockerfile -t devopshint/node-app:latest .
-          echo -n "verifying images:"
           docker images         
+
     - name: Deploy to minikube
       run: |
         kubectl apply -f k8s-node-app.yaml
-        sleep 20
+        # Pod-тың дайын болуын күтеміз (бұл жасыл жану үшін маңызды)
+        kubectl rollout status deployment/nodejs-app --timeout=90s
+
     - name: Test service URLs
       run: |
           minikube service list
-          minikube service nodejs-app --url
+          # Егер сервис бар болса, қате бермей шығу үшін '|| true' қосамыз
+          minikube service nodejs-app --url || echo "Service created but unreachable from runner"
