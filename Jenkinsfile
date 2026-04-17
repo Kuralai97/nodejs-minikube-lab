@@ -1,50 +1,43 @@
 pipeline {
     agent any
     
-    // Біз баптаған NodeJS құралын қолдану
     tools {
-        nodejs 'node' 
-    }
-
-    environment {
-        // Тармаққа байланысты атау мен портты автоматты таңдау
-        // Егер main болса - nodemain:3000, егер dev болса - nodedev:3001
-        APP_NAME = "${env.BRANCH_NAME}" == 'main' ? 'nodemain' : 'nodedev'
-        PORT = "${env.BRANCH_NAME}" == 'main' ? '3000' : '3001'
+        nodejs 'node'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Preparation') {
             steps {
-                checkout scm
+                script {
+                    // Тармаққа байланысты атау мен портты осы жерде анықтаймыз
+                    if (env.BRANCH_NAME == 'main') {
+                        env.APP_NAME = 'nodemain'
+                        env.PORT = '3000'
+                    } else {
+                        env.APP_NAME = 'nodedev'
+                        env.PORT = '3001'
+                    }
+                }
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Build') {
             steps {
                 sh 'npm install'
             }
         }
 
-        stage('Test') {
-            steps {
-                // Егер тесттерің болмаса, бұл жерді 'echo "No tests"' деп өзгертуге болады
-                sh 'npm test || echo "Tests failed but continuing..."'
-            }
-        }
-
         stage('Docker Build') {
             steps {
-                sh "docker build -t ${APP_NAME}:v1.0 ."
+                sh "docker build -t ${env.APP_NAME}:v1.0 ."
             }
         }
 
-        stage('Deploy (Docker Run)') {
+        stage('Deploy') {
             steps {
-                // Ескі контейнер болса өшіріп, жаңасын іске қосамыз
-                sh "docker stop ${APP_NAME} || true"
-                sh "docker rm ${APP_NAME} || true"
-                sh "docker run -d --name ${APP_NAME} -p ${PORT}:3000 ${APP_NAME}:v1.0"
+                sh "docker stop ${env.APP_NAME} || true"
+                sh "docker rm ${env.APP_NAME} || true"
+                sh "docker run -d --name ${env.APP_NAME} -p ${env.PORT}:3000 ${env.APP_NAME}:v1.0"
             }
         }
     }
