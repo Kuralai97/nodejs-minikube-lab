@@ -1,8 +1,12 @@
-FROM node:14
-WORKDIR /usr/src/app
+# node:14-тің орнына кішкентай alpine нұсқасын ал
+FROM node:14-alpine
+
+WORKDIR /app
+
 COPY package*.json ./
 RUN npm install
-RUN npm install express
+
 COPY . .
+
 EXPOSE 3000
-CMD [ "node", "server.js" ]
+CMD ["node", "app.js"]
